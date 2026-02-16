@@ -50,6 +50,43 @@ app.get("/api/books/:id", async (req, res, next) => {
   }
 });
 
+// 3a - POST
+app.post("/api/books", async (req, res, next) => {
+  try {
+    const newBook = req.body;
+
+    // validation - check for titles:
+   if (!newBook.title) {
+      return next(createError(400, "Bad Request"));
+    }
+
+    // INSERTING INTO MOCK DATABASE
+   const result = await books.insertOne(newBook);
+
+    // return 201
+  res.status(201).send({ id: result.ops[0].id });
+
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 3b - DELETE
+app.delete("/api/books/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    await books.deleteOne({ id: parseInt(id) });
+
+    res.status(204).send();
+
+  } catch (err) {
+    next(err);
+  }
+});
+
+
+
 /**
  * ERROR HANDLING
  */
