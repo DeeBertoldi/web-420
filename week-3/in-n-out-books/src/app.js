@@ -91,6 +91,36 @@ app.delete("/api/books/:id", async (req, res, next) => {
  * ERROR HANDLING
  */
 
+// PUT - Update Book
+app.put("/api/books/:id", async (req, res, next) => {
+  try {
+
+    const id = Number(req.params.id);
+
+    // Check if id is not a number
+    if (isNaN(id)) {
+      return next(createError(400, "Input must be a number"));
+    }
+
+    // Check if title is missing
+    if (!req.body.title) {
+      return next(createError(400, "Bad Request"));
+    }
+
+    // Update book in mock database
+    await books.updateOne(
+      { id: id },
+      { $set: { title: req.body.title, author: req.body.author } }
+    );
+
+    res.status(204).send();
+
+  } catch (err) {
+    next(err);
+  }
+});
+
+
 // 404 middleware
 app.use((req, res, next) => {
   next(createError(404));
