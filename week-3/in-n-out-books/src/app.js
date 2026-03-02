@@ -8,6 +8,8 @@
 const express = require("express");
 const createError = require("http-errors");
 const books = require("../database/books");
+const bcrypt = require("bcryptjs");
+const users = require("../database/users");
 
 // Express application
 const app = express();
@@ -50,28 +52,25 @@ app.get("/api/books/:id", async (req, res, next) => {
   }
 });
 
-// 3a - POST
+// POST - Add Book
 app.post("/api/books", async (req, res, next) => {
   try {
     const newBook = req.body;
 
-    // validation - check for titles:
-   if (!newBook.title) {
+    if (!newBook.title) {
       return next(createError(400, "Bad Request"));
     }
 
-    // INSERTING INTO MOCK DATABASE
-   const result = await books.insertOne(newBook);
+    const result = await books.insertOne(newBook);
 
-    // return 201
-  res.status(201).send({ id: result.ops[0].id });
+    res.status(201).send({ id: result.ops[0].id });
 
   } catch (err) {
     next(err);
   }
 });
 
-// 3b - DELETE
+// DELETE - Book
 app.delete("/api/books/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -85,29 +84,19 @@ app.delete("/api/books/:id", async (req, res, next) => {
   }
 });
 
-
-
-/**
- * ERROR HANDLING
- */
-
 // PUT - Update Book
 app.put("/api/books/:id", async (req, res, next) => {
   try {
-
     const id = Number(req.params.id);
 
-    // Check if id is not a number
     if (isNaN(id)) {
       return next(createError(400, "Input must be a number"));
     }
 
-    // Check if title is missing
     if (!req.body.title) {
       return next(createError(400, "Bad Request"));
     }
 
-    // Update book in mock database
     await books.updateOne(
       { id: id },
       { $set: { title: req.body.title, author: req.body.author } }
@@ -120,13 +109,56 @@ app.put("/api/books/:id", async (req, res, next) => {
   }
 });
 
+/**
+ * ============================
+ * LOGIN ROUTE (Chapter 6)
+ * ============================
+ */
+
+app.post("/api/login", async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    // Missing fields → 400
+    if (!email || !password) {
+      return res.status(400).send({ message: "Bad Request" });
+    }
+
+    // Find user
+    const user = await users.findOne({ email: email });
+
+    if (!user) {
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+
+    // Compare password
+    const isValid = bcrypt.compareSync(password, user.password);
+
+    if (!isValid) {
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+
+    // Success
+    return res.status(200).send({ message: "Authentication successful" });
+
+  } catch (err) {
+    console.error("Error: ", err.message);
+    next(err);
+  }
+});
+
+/**
+ * ============================
+ * ERROR HANDLING
+ * ============================
+ */
 
 // 404 middleware
 app.use((req, res, next) => {
   next(createError(404));
 });
 
-// 500 error-handling middleware
+// 500 middleware
 app.use((err, req, res, next) => {
   res.status(err.status || 500);
   res.json({
