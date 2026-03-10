@@ -11,8 +11,35 @@ const books = require("../database/books");
 const bcrypt = require("bcryptjs");
 const users = require("../database/users");
 
+/////// ADDED FOR CHAPTER 7 ///////
+const Ajv = require("ajv");
+
+
 // Express application
 const app = express();
+
+/////// ADDED FOR CHAPTER 7 ///////
+const ajv = new Ajv();
+
+const securityQuestionsSchema = {
+  type: "object",
+  properties: {
+    securityQuestions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          answer: { type: "string" }
+        },
+        required: ["answer"],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ["securityQuestions"],
+  additionalProperties: false
+};
+
 
 // Middleware
 app.use(express.json());
@@ -119,26 +146,22 @@ app.post("/api/login", async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Missing fields → 400
     if (!email || !password) {
       return res.status(400).send({ message: "Bad Request" });
     }
 
-    // Find user
     const user = await users.findOne({ email: email });
 
     if (!user) {
       return res.status(401).send({ message: "Unauthorized" });
     }
 
-    // Compare password
     const isValid = bcrypt.compareSync(password, user.password);
 
     if (!isValid) {
       return res.status(401).send({ message: "Unauthorized" });
     }
 
-    // Success
     return res.status(200).send({ message: "Authentication successful" });
 
   } catch (err) {
@@ -146,6 +169,51 @@ app.post("/api/login", async (req, res, next) => {
     next(err);
   }
 });
+
+
+/////// ADDED FOR CHAPTER 7 ///////
+
+/**
+ * ============================
+ * VERIFY SECURITY QUESTIONS (Chapter 7)
+ * ============================
+ */
+
+app.post("/api/users/:email/verify-security-question", async (req, res, next) => {
+  try {
+
+    const { email } = req.params;
+    const { securityQuestions } = req.body;
+
+    const validate = ajv.compile(securityQuestionsSchema);
+    const valid = validate(req.body);
+
+    if (!valid) {
+      console.error("Bad Request: Invalid request body", validate.errors);
+      return res.status(400).send({ message: "Bad Request" });
+    }
+
+    const user = await users.findOne({ email: email });
+
+    if (
+      securityQuestions[0].answer !== user.securityQuestions[0].answer ||
+      securityQuestions[1].answer !== user.securityQuestions[1].answer ||
+      securityQuestions[2].answer !== user.securityQuestions[2].answer
+    ) {
+      console.error("Unauthorized: Security questions do not match");
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+
+    res.status(200).send({
+      message: "Security questions successfully answered"
+    });
+
+  } catch (err) {
+    console.error("Error:", err.message);
+    next(err);
+  }
+});
+
 
 /**
  * ============================

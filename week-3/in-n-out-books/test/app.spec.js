@@ -141,3 +141,52 @@ describe("Chapter 6: API Tests", () => {
   });
 
 });
+
+//::::::::::::::::::::::::::::::::::::::::::::
+describe("Chapter 7: API Tests", () => {
+
+  it("should return a 200 status code with a message of 'Security questions successfully answered'", async () => {
+    const res = await request(app)
+      .post("/api/users/ron@hogwarts.edu/verify-security-question")
+      .send({
+        securityQuestions: [
+          { answer: "Scabbers" },
+          { answer: "The Quibbler" },
+          { answer: "Prewett" }
+        ]
+      });
+
+    expect(res.statusCode).toEqual(200);
+    expect(res.body.message).toEqual("Security questions successfully answered");
+  });
+
+  it("should return a 400 status code with a message of 'Bad Request' when the request body fails", async () => {
+    const res = await request(app)
+      .post("/api/users/ron@hogwarts.edu/verify-security-question")
+      .send({
+        securityQuestions: [
+          { answer: "Scabbers", question: "Pet name?" },
+          { answer: "The Quibbler" }
+        ]
+      });
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body.message).toEqual("Bad Request");
+  });
+
+  it("should return a 401 status code with a message of 'Unauthorized' when the security questions are incorrect", async () => {
+    const res = await request(app)
+      .post("/api/users/ron@hogwarts.edu/verify-security-question")
+      .send({
+        securityQuestions: [
+          { answer: "Fluffy" },
+          { answer: "The Quibbler" },
+          { answer: "Prewett" }
+        ]
+      });
+
+    expect(res.statusCode).toEqual(401);
+    expect(res.body.message).toEqual("Unauthorized");
+  });
+
+});

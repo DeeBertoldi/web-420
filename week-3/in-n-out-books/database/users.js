@@ -11,7 +11,7 @@ const Collection = require("./collection");
 
 const saltRounds = 10; // number of salt rounds
 
-// Array of user objects with hashed passwords and security questions with answers. 
+// Array of user objects with hashed passwords and security questions with answers.
 const users = new Collection([
   {
     id: 1,
